@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>IndexedDB Analyzer</title>
+<style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    select, input, textarea { width: 300px; margin: 5px 0; }
+    table { border-collapse: collapse; width: 100%; margin-top: 15px; }
+    th, td { border: 1px solid #ccc; padding: 6px 10px; }
+    th { background: #eee; }
+    .btn { padding: 5px 10px; cursor: pointer; margin: 2px; }
+    .editBtn { background: #2196F3; color: white; }
+    .deleteBtn { background: #f44336; color: white; }
+</style>
+</head>
+
+<body>
+<h2>IndexedDB Analyzer</h2>
+
+<button onclick="refreshDatabases()">Refresh Database List</button>
+
+<h3>Databases</h3>
+<select id="dbList" onchange="openSelectedDB()"></select>
+
+<h3>Object Stores</h3>
+<select id="storeList" onchange="loadRecords()"></select>
+
+<h3>Add / Edit Record</h3>
+
+<label>Key:</label><br>
+<input id="recordKey"><br>
+
+<label>Value (JSON):</label><br>
+<textarea id="recordValue" rows="6"></textarea><br>
+
+<button class="btn" onclick="saveRecord()">Save</button>
+<button class="btn" onclick="clearForm()">Clear</button>
+
+<h3>Records</h3>
+<table>
+    <thead>
+        <tr><th>Key</th><th>Value</th><th>Actions</th></tr>
+    </thead>
+    <tbody id="recordTable"></tbody>
+</table>
+
+<script>
+let currentDB = null;
+
+// Get list of databases
+async function refreshDatabases() {
+    if (!indexedDB.databases) {
+        alert("Your browser does not support indexedDB.databases(). Use Chrome or Edge.");
+        return;
+    }
+
+    const dbs = await indexedDB.databases();
+    const dbList = document.getElementById("dbList");
+
+    dbList.innerHTML = "";
+    dbs.forEach(db => {
+        const option = document.createElement("option");
+        option.value = db.name;
+        option.textContent = `${db.name} (v${db.version})`;
+        dbList.appendChild(option);
+    });
+
+    if (dbs.length > 0) {
+        openSelectedDB();
+    }
+}
+
+function openSelectedDB() {
+    const dbName = document.getElementById("dbList").value;
+    if (!dbName) return;
+
+    const request = indexedDB.open(dbName);
+
+    request.onsuccess = event => {
+        currentDB = event.target.result;
+        loadObjectStores();
+    };
+
+    request.onerror = () => alert("Error opening DB.");
+}
+
+function loadObjectStores() {
+    if (!currentDB) return;
+
+    const storeList = document.getElementById("storeList");
+    storeList.innerHTML = "";
+
+    const storeNames = currentDB.objectStoreNames;
+    for (let i = 0; i < storeNames.length; i++) {
+        const opt = document.createElement("option");
+        opt.value = storeNames[i];
+        opt.textContent = storeNames[i];
+        storeList.appendChild(opt);
+    }
+
+    if (storeNames.length > 0) {
+        loadRecords();
+    }
+}
+
+function loadRecords() {
+    if (!currentDB) return;
+
+    const storeName = document.getElementById("storeList").value;
+    const tx = currentDB.transaction(storeName, "readonly");
+    const store = tx.objectStore(storeName);
+
+    const table = document.getElementById("recordTable");
+    table.innerHTML = "";
+
+    store.openCursor().onsuccess = e => {
+        const cursor = e.target.result;
+        if (cursor) {
+            const row = document.createElement("tr");
+
+            const keyCell = document.createElement("td");
+            keyCell.textContent = cursor.key;
+
+            const valueCell = document.createElement("td");
+            valueCell.textContent = JSON.stringify(cursor.value, null, 2);
+
+            const actionsCell = document.createElement("td");
+            actionsCell.innerHTML = `
+                <button class="btn editBtn" onclick="editRecord('${cursor.key}')">Edit</button>
+                <button class="btn deleteBtn" onclick="deleteRecord('${cursor.key}')">Delete</button>
+            `;
+
+            row.appendChild(keyCell);
+            row.appendChild(valueCell);
+            row.appendChild(actionsCell);
+            table.appendChild(row);
+
+            cursor.continue();
+        }
+    };
+}
+
+function editRecord(key) {
+    const storeName = document.getElementById("storeList").value;
+    const tx = currentDB.transaction(storeName, "readonly");
+    const store = tx.objectStore(storeName);
+
+    store.get(key).onsuccess = e => {
+        document.getElementById("recordKey").value = key;
+        document.getElementById("recordValue").value = JSON.stringify(e.target.result, null, 2);
+    };
+}
+
+function saveRecord() {
+    const key = document.getElementById("recordKey").value;
+    let value = document.getElementById("recordValue").value;
+
+    if (!key) {
+        alert("Key cannot be empty.");
+        return;
+    }
+
+    try {
+        value = JSON.parse(value);
+    } catch (err) {
+        alert("Invalid JSON value.");
+        return;
+    }
+
+    const storeName = document.getElementById("storeList").value;
+    const tx = currentDB.transaction(storeName, "readwrite");
+    const store = tx.objectStore(storeName);
+
+    store.put(value, key);
+
+    tx.oncomplete = () => loadRecords();
+}
+
+function deleteRecord(key) {
+    if (!confirm("Delete record: " + key + "?")) return;
+
+    const storeName = document.getElementById("storeList").value;
+    const tx = currentDB.transaction(storeName, "readwrite");
+    const store = tx.objectStore(storeName);
+
+    store.delete(key);
+
+    tx.oncomplete = () => loadRecords();
+}
+
+function clearForm() {
+    document.getElementById("recordKey").value = "";
+    document.getElementById("recordValue").value = "";
+}
+
+refreshDatabases();
+</script>
+</body>
+</html>
