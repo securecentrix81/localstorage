@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Cookie Analyzer</title>
+<style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 15px; }
+    th, td { border: 1px solid #ccc; padding: 8px; }
+    th { background: #eee; }
+    .btn { padding: 6px 10px; cursor: pointer; margin: 2px; }
+    .editBtn { background: #2196F3; color: white; }
+    .deleteBtn { background: #f44336; color: white; }
+</style>
+</head>
+<body>
+
+<h2>Cookie Analyzer</h2>
+
+<h3>Add / Update Cookie</h3>
+
+<label>Cookie Name:</label><br>
+<input id="cookieName" style="width: 300px;"><br><br>
+
+<label>Cookie Value:</label><br>
+<textarea id="cookieValue" style="width: 300px; height: 80px;"></textarea><br><br>
+
+<label>Expires (optional):</label><br>
+<input id="cookieExpires" type="datetime-local" style="width: 250px;"><br><br>
+
+<label>Path (optional):</label><br>
+<input id="cookiePath" placeholder="/" style="width: 250px;"><br><br>
+
+<button class="btn" onclick="saveCookie()">Save Cookie</button>
+<button class="btn" onclick="clearForm()">Clear</button>
+
+<hr>
+
+<h3>Existing Cookies</h3>
+<table>
+    <thead>
+        <tr><th>Name</th><th>Value</th><th>Actions</th></tr>
+    </thead>
+    <tbody id="cookieTable"></tbody>
+</table>
+
+<script>
+// Parse document.cookie into an object
+function getCookies() {
+    const cookies = {};
+    const decoded = decodeURIComponent(document.cookie);
+    decoded.split(";").forEach(pair => {
+        const [name, ...rest] = pair.trim().split("=");
+        if (name) cookies[name] = rest.join("="); 
+    });
+    return cookies;
+}
+
+function loadCookies() {
+    const table = document.getElementById("cookieTable");
+    table.innerHTML = "";
+    const cookies = getCookies();
+
+    for (const name in cookies) {
+        const value = cookies[name];
+        const row = document.createElement("tr");
+
+        row.innerHTML = `
+            <td>${name}</td>
+            <td>${value}</td>
+            <td>
+                <button class="btn editBtn" onclick="editCookie('${name}')">Edit</button>
+                <button class="btn deleteBtn" onclick="deleteCookie('${name}')">Delete</button>
+            </td>
+        `;
+        table.appendChild(row);
+    }
+}
+
+function saveCookie() {
+    const name = document.getElementById("cookieName").value;
+    const value = document.getElementById("cookieValue").value;
+    const expiresInput = document.getElementById("cookieExpires").value;
+    const path = document.getElementById("cookiePath").value || "/";
+
+    if (!name) {
+        alert("Cookie name cannot be empty!");
+        return;
+    }
+
+    let cookieStr = `${encodeURIComponent(name)}=${encodeURIComponent(value)}; path=${path}`;
+
+    if (expiresInput) {
+        const expires = new Date(expiresInput).toUTCString();
+        cookieStr += `; expires=${expires}`;
+    }
+
+    document.cookie = cookieStr;
+    loadCookies();
+}
+
+function deleteCookie(name) {
+    if (!confirm(`Delete cookie "${name}"?`)) return;
+
+    // To delete a cookie, set it to expired
+    document.cookie = `${encodeURIComponent(name)}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+    loadCookies();
+}
+
+function editCookie(name) {
+    const cookies = getCookies();
+    document.getElementById("cookieName").value = name;
+    document.getElementById("cookieValue").value = cookies[name];
+    document.getElementById("cookieExpires").value = "";
+}
+
+function clearForm() {
+    document.getElementById("cookieName").value = "";
+    document.getElementById("cookieValue").value = "";
+    document.getElementById("cookieExpires").value = "";
+    document.getElementById("cookiePath").value = "";
+}
+
+loadCookies();
+</script>
+
+</body>
+</html>
