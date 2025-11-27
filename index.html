@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Local Storage Analyzer</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+    }
+    #storageTable {
+        border-collapse: collapse;
+        width: 100%;
+    }
+    #storageTable th, #storageTable td {
+        border: 1px solid #ccc;
+        padding: 8px;
+    }
+    #storageTable th {
+        background: #eee;
+    }
+    .btn {
+        padding: 6px 10px;
+        cursor: pointer;
+        margin: 2px;
+    }
+    .deleteBtn { background: #f44336; color: white; }
+    .editBtn { background: #2196F3; color: white; }
+</style>
+</head>
+<body>
+
+<h2>Local Storage Analyzer</h2>
+
+<h3>Add / Update Item</h3>
+<label>Key:</label><br>
+<input id="keyInput" style="width: 300px"><br><br>
+
+<label>Value:</label><br>
+<textarea id="valueInput" style="width: 300px; height: 80px"></textarea><br><br>
+
+<button class="btn" onclick="saveItem()">Save</button>
+<button class="btn" onclick="clearInputs()">Clear</button>
+
+<hr>
+
+<h3>Stored Items</h3>
+<table id="storageTable">
+    <thead>
+        <tr><th>Key</th><th>Value</th><th>Actions</th></tr>
+    </thead>
+    <tbody id="storageBody"></tbody>
+</table>
+
+<script>
+function loadStorage() {
+    const tbody = document.getElementById("storageBody");
+    tbody.innerHTML = "";
+
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        const value = localStorage.getItem(key);
+
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td>${key}</td>
+            <td>${value}</td>
+            <td>
+                <button class="btn editBtn" onclick="editItem('${key}')">Edit</button>
+                <button class="btn deleteBtn" onclick="deleteItem('${key}')">Delete</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    }
+}
+
+function saveItem() {
+    const key = document.getElementById("keyInput").value;
+    const value = document.getElementById("valueInput").value;
+
+    if (!key) {
+        alert("Key cannot be empty!");
+        return;
+    }
+
+    localStorage.setItem(key, value);
+    loadStorage();
+}
+
+function deleteItem(key) {
+    if (confirm(`Delete "${key}"?`)) {
+        localStorage.removeItem(key);
+        loadStorage();
+    }
+}
+
+function editItem(key) {
+    document.getElementById("keyInput").value = key;
+    document.getElementById("valueInput").value = localStorage.getItem(key);
+}
+
+function clearInputs() {
+    document.getElementById("keyInput").value = "";
+    document.getElementById("valueInput").value = "";
+}
+
+loadStorage();
+</script>
+
+</body>
+</html>
