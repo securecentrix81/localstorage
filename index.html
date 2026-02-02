@@ -53,6 +53,11 @@
 </table>
 
 <script>
+    function escape(n) {
+let element = document.createElement("p")
+        element.innerText = n
+        return element.innerHTML
+    }
 function loadStorage() {
     const tbody = document.getElementById("storageBody");
     tbody.innerHTML = "";
@@ -63,8 +68,8 @@ function loadStorage() {
 
         const row = document.createElement("tr");
         row.innerHTML = `
-            <td>${key}</td>
-            <td>${value}</td>
+            <td>${escape(key)}</td>
+            <td>${escape(value)}</td>
             <td>
                 <button class="btn editBtn" onclick="editItem('${key}')">Edit</button>
                 <button class="btn deleteBtn" onclick="deleteItem('${key}')">Delete</button>
